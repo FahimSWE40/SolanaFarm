@@ -27,8 +27,11 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {}
-
+    "extra": {
+      "eas": {
+        "projectId": "1f73f6ee-5cfc-4d01-a59a-2d4420943628"
+      }
+    },
+    "owner": "fahimswe"
   }
 }
-
