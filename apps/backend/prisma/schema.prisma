@@ -1,0 +1,447 @@
+// Prisma Schema for Solana Seeker
+// PostgreSQL database with full model definitions
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ User Model ============
+model User {
+  id                String        @id @default(uuid())
+  walletAddress     String        @unique
+  username          String?       @unique
+  avatarUrl         String?
+  email             String?
+  xpTotal           Int           @default(0)
+  level             Int           @default(1)
+  rank              Int?
+  streakCount       Int           @default(0)
+  lastCheckInAt     DateTime?
+  premiumStatus     PremiumStatus @default(FREE)
+  referralCode      String        @unique @default(uuid())
+  referredBy        String?
+  deviceFingerprint String?
+  fcmToken          String?
+  notificationsEnabled Boolean    @default(true)
+  reminderTime      String?       @default("09:00")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  userTasks         UserTask[]
+  xpLogs            XPLog[]
+  walletScore       WalletScore?
+  referralsMade     Referral[]     @relation("Referrer")
+  referralReceived  Referral?      @relation("Referred")
+  badges            UserBadge[]
+  subscription      Subscription?
+  fraudScore        FraudScore?
+  notifications     Notification[]
+
+  @@index([walletAddress])
+  @@index([username])
+  @@index([referralCode])
+  @@index([xpTotal(sort: Desc)])
+  @@index([createdAt])
+  @@index([level])
+}
+
+enum PremiumStatus {
+  FREE
+  PREMIUM
+  PREMIUM_PRO
+}
+
+// ============ Task Model ============
+model Task {
+  id              String         @id @default(uuid())
+  title           String
+  description     String
+  taskType        TaskType
+  xpReward        Int
+  difficulty      Difficulty     @default(EASY)
+  frequency       Frequency
+  validationType  ValidationType
+  startDate       DateTime?
+  endDate         DateTime?
+  isActive        Boolean        @default(true)
+  premiumOnly     Boolean        @default(false)
+  iconName        String?        @default("stars")
+  campaignId      String?
+  campaign        Campaign?      @relation(fields: [campaignId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  userTasks       UserTask[]
+  xpLogs          XPLog[]
+
+  @@index([isActive])
+  @@index([frequency])
+  @@index([taskType])
+  @@index([campaignId])
+}
+
+enum TaskType {
+  DAILY_CHECKIN
+  QUIZ
+  SOCIAL_FOLLOW
+  SOCIAL_JOIN
+  REFERRAL
+  WALLET_CONNECT
+  SOLANA_TRANSACTION
+  NFT_HOLD
+  TOKEN_HOLD
+  DAPP_USE
+  INVITE
+  LEARNING_MODULE
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  ONCE
+  CAMPAIGN
+}
+
+enum ValidationType {
+  MANUAL
+  AUTOMATIC
+  BLOCKCHAIN
+  SOCIAL
+  QUIZ
+}
+
+// ============ UserTask Model ============
+model UserTask {
+  id              String       @id @default(uuid())
+  userId          String
+  taskId          String
+  status          TaskStatus   @default(PENDING)
+  progress        Float        @default(0)
+  completedAt     DateTime?
+  claimedAt       DateTime?
+  proofUrl        String?
+  metadata        Json?
+  createdAt       DateTime     @default(now())
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task            Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([status])
+  @@index([userId, taskId])
+  @@index([createdAt])
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  CLAIMED
+  REJECTED
+}
+
+// ============ XP Log Model ============
+model XPLog {
+  id              String     @id @default(uuid())
+  userId          String
+  taskId          String?
+  amount          Int
+  reason          String
+  multiplier      Float      @default(1.0)
+  source          XPSource
+  createdAt       DateTime   @default(now())
+
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task            Task?      @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([source])
+  @@index([userId, createdAt])
+}
+
+enum XPSource {
+  TASK
+  STREAK_BONUS
+  REFERRAL
+  ADMIN_ADJUSTMENT
+  PREMIUM_BONUS
+  CAMPAIGN_BONUS
+  WELCOME_BONUS
+}
+
+// ============ Leaderboard Snapshot ============
+model LeaderboardSnapshot {
+  id              String            @id @default(uuid())
+  userId          String
+  username        String?
+  avatarUrl       String?
+  xpTotal         Int
+  level           Int
+  rank            Int
+  period          LeaderboardPeriod
+  periodStart     DateTime
+  periodEnd       DateTime
+  premiumStatus   PremiumStatus
+  createdAt       DateTime          @default(now())
+
+  @@index([period, periodStart])
+  @@index([period, rank])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum LeaderboardPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  ALL_TIME
+}
+
+// ============ Wallet Score ============
+model WalletScore {
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  walletAddress    String
+  transactionCount Int       @default(0)
+  walletAgeDays    Int       @default(0)
+  nftCount         Int       @default(0)
+  tokenCount       Int       @default(0)
+  reputationScore  Float     @default(0)
+  lastSyncedAt     DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([walletAddress])
+  @@index([reputationScore])
+}
+
+// ============ Referral ============
+model Referral {
+  id               String         @id @default(uuid())
+  referrerId       String
+  referredUserId   String         @unique
+  status           ReferralStatus @default(PENDING)
+  xpAwarded        Int            @default(0)
+  createdAt        DateTime       @default(now())
+
+  referrer         User           @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred         User           @relation("Referred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([referredUserId])
+  @@index([status])
+}
+
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REWARDED
+  REJECTED
+}
+
+// ============ Badge ============
+model Badge {
+  id              String      @id @default(uuid())
+  name            String      @unique
+  description     String
+  icon            String
+  rarity          BadgeRarity
+  condition       Json
+  createdAt       DateTime    @default(now())
+
+  users           UserBadge[]
+
+  @@index([rarity])
+}
+
+enum BadgeRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model UserBadge {
+  id              String    @id @default(uuid())
+  userId          String
+  badgeId         String
+  earnedAt        DateTime  @default(now())
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge           Badge     @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@index([badgeId])
+}
+
+// ============ Subscription ============
+model Subscription {
+  id              String             @id @default(uuid())
+  userId          String             @unique
+  plan            SubscriptionPlan
+  status          SubscriptionStatus @default(ACTIVE)
+  startDate       DateTime           @default(now())
+  endDate         DateTime
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+// ============ Notification ============
+model Notification {
+  id              String           @id @default(uuid())
+  userId          String
+  title           String
+  body            String
+  type            NotificationType
+  isRead          Boolean          @default(false)
+  metadata        Json?
+  createdAt       DateTime         @default(now())
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([userId, isRead])
+}
+
+enum NotificationType {
+  NEW_TASK
+  STREAK_REMINDER
+  RANK_CHANGE
+  NEW_CAMPAIGN
+  XP_CLAIMED
+  PREMIUM_OFFER
+  REWARD_UPDATE
+  BADGE_EARNED
+}
+
+// ============ Fraud Score ============
+model FraudScore {
+  id              String      @id @default(uuid())
+  userId          String      @unique
+  score           Float       @default(0)
+  reasonFlags     Json        @default("[]")
+  status          FraudStatus @default(NORMAL)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([score])
+}
+
+enum FraudStatus {
+  NORMAL
+  SUSPICIOUS
+  BLOCKED
+}
+
+// ============ Campaign ============
+model Campaign {
+  id              String    @id @default(uuid())
+  name            String
+  description     String
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean   @default(true)
+  bonusMultiplier Float     @default(1.0)
+  imageUrl        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tasks           Task[]
+
+  @@index([isActive])
+  @@index([startDate, endDate])
+}
+
+// ============ Quiz Module ============
+model QuizModule {
+  id              String    @id @default(uuid())
+  title           String
+  lessonContent   String    @db.Text
+  questions       Json
+  xpReward        Int
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([isActive])
+}
+
+// ============ Admin User ============
+model AdminUser {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String
+  role            AdminRole
+  name            String
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  auditLogs       AdminAuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  CAMPAIGN_MANAGER
+  SUPPORT_ADMIN
+}
+
+// ============ Admin Audit Log ============
+model AdminAuditLog {
+  id              String    @id @default(uuid())
+  adminId         String
+  action          String
+  targetType      String
+  targetId        String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+
+  admin           AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([targetType])
+  @@index([createdAt])
+  @@index([action])
+}
