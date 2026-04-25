@@ -27,11 +27,8 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "your-project-id"
-      }
-    }
+    "extra": {}
+
   }
 }
 
