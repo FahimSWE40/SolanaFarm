@@ -1,210 +1,168 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  StatusBar,
-  TouchableOpacity,
-  Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  StatusBar, Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, borderRadius } from '../theme';
-import { GlassCard, PrimaryButton } from '../components/ui';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api/client';
-import { useAuthStore } from '../store';
 
-export default function PremiumScreen() {
-  const { user, fetchProfile } = useAuthStore();
-  const qc = useQueryClient();
-  const [selected, setSelected] = useState<'monthly' | 'yearly'>('yearly');
+interface PremiumScreenProps {
+  onClose?: () => void;
+}
 
-  const { data: plans } = useQuery({
-    queryKey: ['premium-plans'],
-    queryFn: () => api.getPlans(),
-  });
+function FeatureRow({ icon, title, sub, gold }: {
+  icon: string; title: string; sub: string; gold?: boolean;
+}) {
+  return (
+    <View style={[s.featureRow, gold && s.featureRowGold]}>
+      <View style={[s.featureIcon, gold && s.featureIconGold]}>
+        <Text style={{ fontSize: 22 }}>{icon}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.featureTitle}>{title}</Text>
+        <Text style={s.featureSub}>{sub}</Text>
+      </View>
+    </View>
+  );
+}
 
-  const subscribeMutation = useMutation({
-    mutationFn: (plan: string) => api.subscribe(plan.toUpperCase()),
-    onSuccess: () => {
-      Alert.alert(
-        '⭐ Welcome to Premium!',
-        'Your premium subscription is now active. Enjoy your XP multiplier!',
-        [{ text: 'Awesome!', onPress: () => fetchProfile() }],
-      );
-      qc.invalidateQueries({ queryKey: ['xp-summary'] });
-    },
-    onError: (error: any) => {
-      Alert.alert('Error', error?.response?.data?.message || 'Subscription failed');
-    },
-  });
+function CheckItem({ text, gold }: { text: string; gold?: boolean }) {
+  return (
+    <View style={s.checkRow}>
+      <Text style={[s.checkIcon, gold ? { color: colors.gold } : { color: colors.primary }]}>✓</Text>
+      <Text style={[s.checkText, gold && { color: 'rgba(255,255,255,0.90)', fontFamily: typography.fontFamily.bodyMedium }]}>{text}</Text>
+    </View>
+  );
+}
 
-  const isPremium = user?.premiumStatus !== 'FREE';
+export default function PremiumScreen({ onClose }: PremiumScreenProps = {}) {
+  const [loading, setLoading] = useState(false);
 
-  const planDetails = [
-    {
-      id: 'monthly',
-      name: 'Premium',
-      price: '$9.99',
-      period: '/month',
-      multiplier: '1.25x',
-      color: colors.tertiary,
-      features: [
-        '1.25x XP multiplier on all tasks',
-        'Access to premium-only tasks',
-        'Advanced stats and analytics',
-        'Premium profile badge',
-        'Priority in leaderboard visibility',
-      ],
-    },
-    {
-      id: 'yearly',
-      name: 'Premium Pro',
-      price: '$79.99',
-      period: '/year',
-      multiplier: '1.5x',
-      color: colors.primary,
-      badge: 'Best Value',
-      features: [
-        '1.5x XP multiplier on all tasks',
-        'All premium-only tasks',
-        'Early access to campaigns',
-        'Exclusive Premium Pro badge',
-        'Priority support',
-        'Save $39.89 vs monthly',
-      ],
-    },
-  ];
+  const handleUpgrade = (plan: 'monthly' | 'yearly') => {
+    const price = plan === 'monthly' ? '$4.99/mo' : '$9.99/mo';
+    Alert.alert(
+      'Upgrade to Elite',
+      `Subscribe for ${price}?\n\n${plan === 'yearly' ? '2×' : '1.25×'} XP multiplier + all premium features.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Upgrade',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await api.upgradePremium(plan);
+              Alert.alert('Elite Status Activated!', 'Your XP multiplier is now live.');
+              onClose?.();
+            } catch {
+              Alert.alert('Error', 'Upgrade failed. Please try again.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
-    <View style={s.container}>
+    <View style={s.root}>
       <StatusBar barStyle="light-content" />
-      <ScrollView
-        contentContainerStyle={s.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={s.header}>
-          <Text style={s.headerEmoji}>⭐</Text>
-          <Text style={s.title}>Upgrade to Premium</Text>
-          <Text style={s.subtitle}>Boost your XP and unlock exclusive features</Text>
+
+      <View style={s.header}>
+        <Text style={s.headerTitle}>Solana Seeker</Text>
+        {onClose && (
+          <TouchableOpacity onPress={onClose} style={s.closeBtn}>
+            <Text style={s.closeIcon}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* ── Hero ── */}
+        <View style={s.heroSection}>
+          <View style={s.heroOrb1} />
+          <View style={s.heroOrb2} />
+          <Text style={s.heroTitle}>Elite Status{'\n'}Awaits</Text>
+          <Text style={s.heroSub}>
+            Elevate your presence on the Solana network with exclusive rewards and
+            advanced tools designed for the top 1% of seekers.
+          </Text>
         </View>
 
-        {/* Current Status */}
-        {isPremium && (
-          <GlassCard glowColor={colors.primary} style={s.activeCard}>
-            <Text style={s.activeTitle}>⭐ {user?.premiumStatus === 'PREMIUM_PRO' ? 'Premium Pro' : 'Premium'} Active</Text>
-            <Text style={s.activeDesc}>
-              You're enjoying {user?.premiumStatus === 'PREMIUM_PRO' ? '1.5x' : '1.25x'} XP multiplier on all your tasks!
-            </Text>
-          </GlassCard>
-        )}
+        {/* ── Feature highlights ── */}
+        <View style={s.features}>
+          <FeatureRow icon="⚡" title="XP Surge Protocol" sub="Activate a permanent 1.25x–2x multiplier on all XP gains." gold />
+          <FeatureRow icon="💎" title="High-Stakes Missions" sub="Exclusive access to Tier 3 operations featuring rare NFT blueprints." />
+          <FeatureRow icon="📊" title="On-Chain Intelligence" sub="Real-time performance analytics and predictive mission modeling." />
+        </View>
 
-        {/* XP Multiplier Comparison */}
-        <Text style={s.sectionTitle}>XP Multiplier Comparison</Text>
-        <GlassCard style={s.comparisonCard}>
-          {[
-            { tier: 'Free', multiplier: '1.0x', color: colors.textMuted, active: !isPremium },
-            { tier: 'Premium', multiplier: '1.25x', color: colors.tertiary, active: user?.premiumStatus === 'PREMIUM' },
-            { tier: 'Premium Pro', multiplier: '1.5x', color: colors.primary, active: user?.premiumStatus === 'PREMIUM_PRO' },
-          ].map((row) => (
-            <View key={row.tier} style={[s.compRow, row.active && s.compRowActive]}>
-              <Text style={s.compTier}>{row.tier}</Text>
-              <Text style={[s.compMul, { color: row.color }]}>{row.multiplier}</Text>
-              {row.active && <Text style={s.compCurrent}>✓ Current</Text>}
+        {/* ── Plan: Basic ── */}
+        <View style={s.planCard}>
+          <View style={s.planCardInner}>
+            <Text style={s.planLabel}>SEEKER CORPS</Text>
+            <Text style={s.planName}>Premium</Text>
+            <View style={s.planPrice}>
+              <Text style={s.planPriceNum}>$4.99</Text>
+              <Text style={s.planPricePer}> / month</Text>
             </View>
-          ))}
-        </GlassCard>
-
-        {/* Plan Selector */}
-        {!isPremium && (
-          <>
-            <Text style={s.sectionTitle}>Choose Your Plan</Text>
-            <View style={s.planSelector}>
-              {planDetails.map((plan) => (
-                <TouchableOpacity
-                  key={plan.id}
-                  style={[s.planCard, selected === plan.id && { borderColor: plan.color, borderWidth: 2 }]}
-                  onPress={() => setSelected(plan.id as 'monthly' | 'yearly')}
-                  activeOpacity={0.8}
-                >
-                  {plan.badge && (
-                    <View style={[s.planBadge, { backgroundColor: plan.color }]}>
-                      <Text style={s.planBadgeText}>{plan.badge}</Text>
-                    </View>
-                  )}
-                  <Text style={[s.planName, { color: plan.color }]}>{plan.name}</Text>
-                  <View style={s.planPrice}>
-                    <Text style={s.planPriceVal}>{plan.price}</Text>
-                    <Text style={s.planPricePeriod}>{plan.period}</Text>
-                  </View>
-                  <View style={s.planMultiplierBadge}>
-                    <Text style={[s.planMultiplierText, { color: plan.color }]}>
-                      {plan.multiplier} XP
-                    </Text>
-                  </View>
-                  <View style={s.planFeatures}>
-                    {plan.features.map((feature, i) => (
-                      <View key={i} style={s.featureRow}>
-                        <Text style={[s.featureCheck, { color: plan.color }]}>✓</Text>
-                        <Text style={s.featureText}>{feature}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  {selected === plan.id && (
-                    <View style={[s.selectedIndicator, { backgroundColor: plan.color + '20', borderColor: plan.color + '60' }]}>
-                      <Text style={[s.selectedText, { color: plan.color }]}>Selected</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+            <View style={s.planFeatures}>
+              <CheckItem text="1.25x XP Multiplier" />
+              <CheckItem text="Tier 1 Premium Tasks" />
+              <CheckItem text="Standard Analytics" />
             </View>
+            <TouchableOpacity style={s.planBtnBasic} onPress={() => handleUpgrade('monthly')} disabled={loading}>
+              <Text style={s.planBtnBasicText}>Select Basic</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-            <PrimaryButton
-              title={`Subscribe to ${selected === 'yearly' ? 'Premium Pro' : 'Premium'}`}
-              onPress={() => {
-                Alert.alert(
-                  'Confirm Subscription',
-                  `Subscribe to ${selected === 'yearly' ? 'Premium Pro ($79.99/year)' : 'Premium ($9.99/month)'}?`,
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Subscribe',
-                      onPress: () => subscribeMutation.mutate(selected),
-                    },
-                  ],
-                );
-              }}
-              disabled={subscribeMutation.isPending}
-              size="lg"
-              style={s.subscribeBtn}
-            />
-
-            <Text style={s.disclaimer}>
-              * Payment processing coming soon. Subscriptions will be activated via in-app purchases.
-            </Text>
-          </>
-        )}
-
-        {/* Benefits Overview */}
-        <Text style={s.sectionTitle}>Why Go Premium?</Text>
-        <GlassCard style={s.benefitsCard}>
-          {[
-            { icon: '⚡', title: 'More XP Per Task', desc: 'Earn up to 50% more XP on every task you complete' },
-            { icon: '🎯', title: 'Exclusive Missions', desc: 'Access premium-only tasks with higher XP rewards' },
-            { icon: '📊', title: 'Advanced Analytics', desc: 'Deep dive into your progress with detailed stats' },
-            { icon: '🚀', title: 'Early Access', desc: 'Get first access to new campaigns and features' },
-            { icon: '🏆', title: 'Climb Faster', desc: 'Reach higher tiers and better reward eligibility' },
-          ].map((b) => (
-            <View key={b.title} style={s.benefitRow}>
-              <Text style={s.benefitIcon}>{b.icon}</Text>
-              <View style={s.benefitInfo}>
-                <Text style={s.benefitTitle}>{b.title}</Text>
-                <Text style={s.benefitDesc}>{b.desc}</Text>
+        {/* ── Plan: Elite Pro ── */}
+        <View style={s.elitePlanWrap}>
+          <LinearGradient colors={['#D4AF37', '#9945FF']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={s.eliteBorder}>
+            <View style={s.elitePlanInner}>
+              <LinearGradient colors={['#D4AF37', '#F9E29C']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.popularBadge}>
+                <Text style={s.popularBadgeText}>Most Popular</Text>
+              </LinearGradient>
+              <Text style={s.elitePlanLabel}>ELITE COMMAND</Text>
+              <View style={s.elitePlanNameRow}>
+                <Text style={s.elitePlanName}>Premium Pro </Text>
+                <Text style={{ fontSize: 18, color: colors.gold }}>★</Text>
               </View>
+              <View style={s.planPrice}>
+                <Text style={[s.planPriceNum, { fontSize: 40 }]}>$9.99</Text>
+                <Text style={s.planPricePer}> / month</Text>
+              </View>
+              <View style={s.planFeatures}>
+                <CheckItem text="2x XP Multiplier & Boosts" gold />
+                <CheckItem text="All Premium Task Tiers" gold />
+                <CheckItem text="Full Analytics Suite" gold />
+                <CheckItem text="Alpha Drop Access" gold />
+                <CheckItem text="VIP Support Channel" gold />
+              </View>
+              <TouchableOpacity onPress={() => handleUpgrade('yearly')} disabled={loading} activeOpacity={0.85}>
+                <LinearGradient colors={['#D4AF37', '#F9E29C', '#9945FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.eliteBtn}>
+                  <Text style={s.eliteBtnText}>{loading ? 'ACTIVATING...' : 'UPGRADE TO ELITE'}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* ── Trust badges ── */}
+        <View style={s.trust}>
+          {[
+            { icon: '🛡️', label: 'Solana Pay\nSecure' },
+            { icon: '🔄', label: 'No\nCommitment' },
+            { icon: '📋', label: 'Audited\nContracts' },
+          ].map((t) => (
+            <View key={t.label} style={s.trustItem}>
+              <Text style={s.trustIcon}>{t.icon}</Text>
+              <Text style={s.trustLabel}>{t.label}</Text>
             </View>
           ))}
-        </GlassCard>
+        </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -213,166 +171,58 @@ export default function PremiumScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing['5xl'] },
-  header: { alignItems: 'center', marginBottom: spacing['3xl'] },
-  headerEmoji: { fontSize: 48, marginBottom: spacing.md },
-  title: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes['3xl'],
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.sizes.md,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  activeCard: { marginBottom: spacing['2xl'], alignItems: 'center' },
-  activeTitle: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes.xl,
-    color: colors.primary,
-    marginBottom: spacing.sm,
-  },
-  activeDesc: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  sectionTitle: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes.xl,
-    color: colors.textPrimary,
-    marginBottom: spacing.lg,
-    marginTop: spacing.lg,
-  },
-  comparisonCard: { marginBottom: spacing.lg, gap: spacing.md },
-  compRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  compRowActive: {
-    backgroundColor: colors.primaryContainer + '20',
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-  },
-  compTier: {
-    flex: 1,
-    fontFamily: typography.fontFamily.bodyMedium,
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-  },
-  compMul: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes.xl,
-    marginRight: spacing.md,
-  },
-  compCurrent: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.sizes.xs,
-    color: colors.secondary,
-  },
-  planSelector: { gap: spacing.lg, marginBottom: spacing.xl },
-  planCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    position: 'relative',
-  },
-  planBadge: {
-    position: 'absolute',
-    top: -spacing.sm,
-    right: spacing.xl,
-    paddingVertical: spacing.xxs,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-  },
-  planBadgeText: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes.xs,
-    color: colors.onPrimary,
-  },
-  planName: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes['2xl'],
-    marginBottom: spacing.sm,
-  },
-  planPrice: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginBottom: spacing.md },
-  planPriceVal: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes['4xl'],
-    color: colors.textPrimary,
-  },
-  planPricePeriod: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.sizes.md,
-    color: colors.textMuted,
-  },
-  planMultiplierBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primaryContainer + '40',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    marginBottom: spacing.lg,
-  },
-  planMultiplierText: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes.md,
-  },
-  planFeatures: { gap: spacing.sm },
-  featureRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  featureCheck: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes.md,
-    width: 20,
-  },
-  featureText: {
-    flex: 1,
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-  },
-  selectedIndicator: {
-    marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  selectedText: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.sizes.sm,
-  },
-  subscribeBtn: { marginBottom: spacing.md },
-  disclaimer: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.sizes.xs,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: spacing['3xl'],
-    lineHeight: 16,
-  },
-  benefitsCard: { gap: spacing.lg },
-  benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.lg },
-  benefitIcon: { fontSize: 24, width: 32 },
-  benefitInfo: { flex: 1 },
-  benefitTitle: {
-    fontFamily: typography.fontFamily.headingMedium,
-    fontSize: typography.sizes.md,
-    color: colors.textPrimary,
-    marginBottom: spacing.xxs,
-  },
-  benefitDesc: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.sizes.sm,
-    color: colors.textMuted,
-  },
+  root: { flex: 1, backgroundColor: '#05050a' },
+  scroll: { paddingHorizontal: spacing.lg },
+
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, height: 64, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  headerTitle: { fontFamily: typography.fontFamily.heading, fontSize: 18, color: colors.gold, letterSpacing: -0.5 },
+  closeBtn: { padding: spacing.sm },
+  closeIcon: { fontSize: 18, color: '#94a3b8' },
+
+  heroSection: { alignItems: 'center', paddingTop: spacing['3xl'], paddingBottom: spacing['2xl'], overflow: 'hidden' },
+  heroOrb1: { position: 'absolute', top: -48, left: '50%', marginLeft: -80, width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(212,175,55,0.10)' },
+  heroOrb2: { position: 'absolute', top: '30%', left: '50%', marginLeft: -160, width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(153,69,255,0.08)' },
+  heroTitle: { fontFamily: typography.fontFamily.heading, fontSize: 40, color: colors.gold, textAlign: 'center', letterSpacing: -1, lineHeight: 44, marginBottom: spacing.lg, zIndex: 1 },
+  heroSub: { fontFamily: typography.fontFamily.body, fontSize: 15, color: '#94a3b8', textAlign: 'center', lineHeight: 22, maxWidth: 300, zIndex: 1 },
+
+  features: { gap: spacing.md, marginBottom: spacing['2xl'] },
+  featureRow: { backgroundColor: colors.glassCard, borderRadius: borderRadius['2xl'], padding: spacing.lg, flexDirection: 'row', alignItems: 'flex-start', gap: spacing.lg, borderWidth: 1, borderColor: colors.outlineVariant },
+  featureRowGold: { borderColor: 'rgba(212,175,55,0.15)' },
+  featureIcon: { width: 48, height: 48, borderRadius: borderRadius.lg, backgroundColor: 'rgba(153,69,255,0.15)', borderWidth: 1, borderColor: 'rgba(153,69,255,0.25)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  featureIconGold: { backgroundColor: 'rgba(212,175,55,0.15)', borderColor: 'rgba(212,175,55,0.25)' },
+  featureTitle: { fontFamily: typography.fontFamily.heading, fontSize: 16, color: '#fff', letterSpacing: -0.3, marginBottom: 4 },
+  featureSub: { fontFamily: typography.fontFamily.body, fontSize: 13, color: '#94a3b8', lineHeight: 19 },
+
+  planCard: { backgroundColor: colors.glassCard, borderRadius: borderRadius['3xl'], borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: spacing.xl },
+  planCardInner: { backgroundColor: 'rgba(10,11,30,0.95)', borderRadius: borderRadius['3xl'] - 1, padding: spacing['2xl'] },
+  elitePlanWrap: { borderRadius: borderRadius['3xl'], overflow: 'hidden', marginBottom: spacing['2xl'] },
+  eliteBorder: { padding: 2, borderRadius: borderRadius['3xl'] },
+  elitePlanInner: { backgroundColor: '#050614', borderRadius: borderRadius['3xl'] - 2, padding: spacing['2xl'], position: 'relative' },
+  popularBadge: { position: 'absolute', top: spacing.lg, right: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: borderRadius.full },
+  popularBadgeText: { fontFamily: typography.fontFamily.heading, fontSize: 10, color: '#020205', letterSpacing: 0.5 },
+
+  planLabel: { fontFamily: typography.fontFamily.heading, fontSize: 11, color: colors.textMuted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.sm },
+  planName: { fontFamily: typography.fontFamily.heading, fontSize: 28, color: '#fff', letterSpacing: -0.5, marginBottom: spacing.lg },
+  elitePlanLabel: { fontFamily: typography.fontFamily.heading, fontSize: 11, color: colors.gold, letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.sm },
+  elitePlanNameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
+  elitePlanName: { fontFamily: typography.fontFamily.heading, fontSize: 28, color: '#fff', letterSpacing: -0.5 },
+
+  planPrice: { flexDirection: 'row', alignItems: 'baseline', marginBottom: spacing['2xl'] },
+  planPriceNum: { fontFamily: typography.fontFamily.heading, fontSize: 34, color: '#fff' },
+  planPricePer: { fontFamily: typography.fontFamily.body, fontSize: 15, color: '#64748b' },
+
+  planFeatures: { gap: spacing.md, marginBottom: spacing['2xl'] },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  checkIcon: { fontSize: 16, fontWeight: '700' },
+  checkText: { fontFamily: typography.fontFamily.body, fontSize: 14, color: '#94a3b8', flex: 1 },
+
+  planBtnBasic: { paddingVertical: spacing.lg, borderRadius: borderRadius.xl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center' },
+  planBtnBasicText: { fontFamily: typography.fontFamily.heading, fontSize: 12, color: '#fff', letterSpacing: 1.5 },
+  eliteBtn: { paddingVertical: spacing.xl, borderRadius: borderRadius['2xl'], alignItems: 'center' },
+  eliteBtnText: { fontFamily: typography.fontFamily.heading, fontSize: 12, color: '#020205', letterSpacing: 2 },
+
+  trust: { flexDirection: 'row', justifyContent: 'center', gap: spacing['2xl'], opacity: 0.35, marginBottom: spacing.xl },
+  trustItem: { alignItems: 'center', gap: spacing.xs },
+  trustIcon: { fontSize: 18 },
+  trustLabel: { fontFamily: typography.fontFamily.heading, fontSize: 9, color: colors.textSecondary, letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center' },
 });

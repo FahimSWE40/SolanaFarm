@@ -1,69 +1,64 @@
-/**
- * Solana Seeker Design Theme
- * Futuristic dark mode with Solana-inspired neon accents.
- * Based on the Stitch design reference.
- */
-
 export const colors = {
-  // Core background
-  background: '#0C0A14',
-  surface: '#1A1625',
-  surfaceVariant: '#241E33',
-  surfaceElevated: '#2D2640',
+  // Core backgrounds
+  background: '#020205',
+  surface: '#0A0B1E',
+  surfaceBright: '#1d1e32',
+  surfaceVariant: '#323348',
+  surfaceElevated: '#27283d',
 
-  // Primary - Neon Purple
-  primary: '#D8B9FF',
-  primaryContainer: '#5B3E99',
-  primaryDim: '#B388FF',
-  onPrimary: '#1A0042',
+  // Primary — lavender text / neon purple glow
+  primary: '#d8b9ff',
+  primaryContainer: '#9945FF',
+  primaryDim: '#b87cff',
+  onPrimary: '#020205',
 
-  // Secondary - Neon Green
-  secondary: '#00F5A0',
-  secondaryContainer: '#003D28',
-  secondaryDim: '#00D68F',
-  onSecondary: '#002114',
+  // Secondary — neon green
+  secondary: '#14F195',
+  secondaryDim: '#a0ffc3',
+  secondaryContainer: '#00ec91',
+  onSecondary: '#00391f',
 
-  // Tertiary - Cyan
-  tertiary: '#00E5FF',
+  // Tertiary — cyan
+  tertiary: '#75d1ff',
   tertiaryContainer: '#004D67',
   onTertiary: '#003548',
 
-  // Accent
-  accent: '#FFD700',
-  accentPink: '#FF6B9D',
-  accentOrange: '#FF8A50',
+  // Gold / premium
+  gold: '#D4AF37',
+  goldLight: '#F9E29C',
 
   // Error
-  error: '#FFB4AB',
+  error: '#ffb4ab',
   errorContainer: '#93000A',
-  onError: '#690005',
 
   // Text
-  textPrimary: '#FFFFFF',
-  textSecondary: '#CAC4D0',
+  textPrimary: '#e1e0fb',
+  textSecondary: '#cec2d8',
   textMuted: '#79747E',
   textDisabled: '#49454F',
 
   // Borders
-  outline: '#4C4355',
-  outlineVariant: '#332D3E',
+  outline: '#4c4355',
+  outlineVariant: 'rgba(255,255,255,0.07)',
 
   // Status
-  success: '#00F5A0',
-  warning: '#FFD700',
-  info: '#00E5FF',
+  success: '#14F195',
+  warning: '#D4AF37',
+  info: '#75d1ff',
 
-  // Gradient presets
-  gradientPrimary: ['#5B3E99', '#D8B9FF'],
-  gradientSecondary: ['#003D28', '#00F5A0'],
-  gradientCard: ['#241E33', '#1A1625'],
-  gradientAccent: ['#D8B9FF', '#00E5FF'],
-  gradientGlow: ['#5B3E9960', '#D8B9FF20', '#00000000'],
+  // Glass card surfaces
+  glassCard: 'rgba(10,11,30,0.60)',
+  glassCardBright: 'rgba(22,23,45,0.65)',
 
-  // Reward tier colors
+  // Accent legacy (kept for badge system)
+  accent: '#d8b9ff',
+  accentOrange: '#FF8A50',
+  accentPink: '#FF6B9D',
+
+  // Reward tiers
   diamond: '#B9F2FF',
   platinum: '#E5E4E2',
-  gold: '#FFD700',
+  gold2: '#FFD700',
   silver: '#C0C0C0',
   bronze: '#CD7F32',
 
@@ -73,6 +68,13 @@ export const colors = {
   rare: '#2196F3',
   epic: '#AB47BC',
   legendary: '#FFD700',
+
+  // Gradient presets
+  gradientPrimary: ['#9945FF', '#d8b9ff'] as string[],
+  gradientSecondary: ['#003D28', '#14F195'] as string[],
+  gradientXP: ['#9945FF', '#b87cff', '#14F195'] as string[],
+  gradientGold: ['#D4AF37', '#F9E29C'] as string[],
+  gradientCard: ['rgba(153,69,255,0.14)', 'rgba(10,11,30,0.75)', 'rgba(20,241,149,0.05)'] as string[],
 };
 
 export const spacing = {
@@ -90,9 +92,9 @@ export const spacing = {
 };
 
 export const typography = {
-  // Using Space Grotesk for headings and Inter for body
   fontFamily: {
     heading: 'SpaceGrotesk_700Bold',
+    headingBlack: 'SpaceGrotesk_700Bold',
     headingMedium: 'SpaceGrotesk_500Medium',
     headingLight: 'SpaceGrotesk_300Light',
     body: 'Inter_400Regular',
@@ -126,28 +128,36 @@ export const borderRadius = {
   lg: 16,
   xl: 20,
   '2xl': 24,
+  '3xl': 28,
   full: 999,
 };
 
 export const shadows = {
   glow: {
-    shadowColor: colors.primary,
+    shadowColor: '#9945FF',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
     elevation: 8,
   },
   glowGreen: {
-    shadowColor: colors.secondary,
+    shadowColor: '#14F195',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  glowGold: {
+    shadowColor: '#D4AF37',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
     elevation: 8,
   },
   card: {
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },

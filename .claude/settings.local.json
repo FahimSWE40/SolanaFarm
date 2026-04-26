@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.anthropic.com)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\partn\\\\.claude\\\\projects\\\\f--Solana-Farm\\\\e9f21395-fc25-42d8-8c60-2d86bf2ec8ad\\\\tool-results\\\\design\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName, Length)"
+    ]
+  }
+}
